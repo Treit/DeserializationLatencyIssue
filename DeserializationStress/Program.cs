@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Management;
+using System.Text;
 using System.Text.Json;
 
 class Program
@@ -6,12 +8,14 @@ class Program
     /// <summary>
     /// Simulates a scenario where a large JSON document is deserialized repeatedly while other
     /// threads in the process are concurrently allocating lots of short-lived Large Object Heap (LOH)
-    /// allocations.
+    /// allocations. This mimics a real-world production scenario for a web server during peak traffic volumes.
     /// </summary>
     /// <param name="args">The command-line arguments.</param>
     /// <returns>A Task that completes when the program is finished executing.</returns>
     static async Task Main(string[] args)
     {
+        Console.OutputEncoding = Encoding.UTF8;
+
         var totalRunTime = args.Length == 0 ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(int.Parse(args[0]));
 
         await Task.Yield();
@@ -27,6 +31,19 @@ class Program
         var totalSlowDeserialization = 0;
         var maxDeserializationTime = 0;
 
+        // Memory usage tracking
+        var currentProcess = Process.GetCurrentProcess();
+        var memoryReadings = new List<long>();
+        var peakMemoryUsed = 0L;
+
+        var memoryCheckTimer = new Timer(_ =>
+        {
+            currentProcess.Refresh();
+            var memoryUsed = currentProcess.WorkingSet64;
+            memoryReadings.Add(memoryUsed);
+            peakMemoryUsed = Math.Max(peakMemoryUsed, memoryUsed);
+        }, null, 0, 1000);
+
         while (true)
         {
             var start = DateTimeOffset.UtcNow;
@@ -38,7 +55,7 @@ class Program
             {
                 totalSlowDeserialization++;
                 maxDeserializationTime = Math.Max(maxDeserializationTime, (int)elapsed);
-                Console.WriteLine($"Slow Deserialization: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed} ms");
+                Console.WriteLine($"🔥 Slow Deserialization detected: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed} ms");
             }
 
             _ = StressTest.RunMemoryPressureTestAsync(32);
@@ -49,9 +66,51 @@ class Program
             }
         }
 
-        Console.WriteLine($"Finished after {swTotal.Elapsed}.");
+        await memoryCheckTimer.DisposeAsync();
+
+        var avgMemoryUsed = memoryReadings.Count > 0 ? memoryReadings.Average() : 0;
+        var systemMemory = GetSystemMemory();
+        var avgMemoryPercent = avgMemoryUsed / systemMemory * 100;
+        var peakMemoryPercent = peakMemoryUsed / (double)systemMemory * 100;
+
+        Console.WriteLine($"🏁 Finished after {swTotal.Elapsed}.");
+        Console.WriteLine("--------------------------------------------------");
         Console.WriteLine($"Total slow deserialization: {totalSlowDeserialization}.");
         Console.WriteLine($"Max deserialization time: {maxDeserializationTime} ms.");
+        Console.WriteLine($"Total system memory: {FormatByteSize(systemMemory)}");
+        Console.WriteLine($"Average memory usage: {FormatByteSize(avgMemoryUsed)} ({avgMemoryPercent:F2}%)");
+        Console.WriteLine($"Peak memory usage: {FormatByteSize(peakMemoryUsed)} ({peakMemoryPercent:F2}%)");
+        Console.WriteLine("--------------------------------------------------");
+    }
+
+    private static string FormatByteSize(double bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
+        int order = 0;
+        while (bytes >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            bytes /= 1024;
+        }
+
+        return $"{bytes:0.##} {sizes[order]}";
+    }
+
+    private static ulong GetSystemMemory()
+    {
+        var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
+        foreach (var os in searcher.Get())
+        {
+            var size = os["TotalVisibleMemorySize"] switch
+            {
+                ulong totalMemory => totalMemory,
+                _ => 0UL
+            };
+
+            return size * 1024;
+        }
+
+        return 0;
     }
 }
 
