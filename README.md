@@ -36,7 +36,7 @@ Peak memory usage: 63.29 GB (99.76%)
 --------------------------------------------------
 ```
 
-### .NET 9 with .NET 6 GC results (5 minute run)
+### .NET 9 with Sements GC (clrgc.dll) results (5 minute run)
 ```
 --------------------------------------------------
 Total deserializations: 240808.
