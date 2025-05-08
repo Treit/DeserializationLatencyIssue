@@ -1,6 +1,8 @@
 # .NET 9 Deserialization Latency Issue due to GC changes
 This repo showcases a perf issue deserializing objects under stress conditions when a process is doing lots of large memory allocations. We observe that using the newer regions-based Garbage Collector (GC) introduced in .NET 7 and later shows a significant performance regression compared to the previous segments-based GC for this particular scenario.
 
+GitHub issue opened: https://github.com/dotnet/runtime/issues/115411
+
 ## Background
 The scenario in question is based on a real-world large-scale web service.
 
