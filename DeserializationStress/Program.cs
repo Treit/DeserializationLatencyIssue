@@ -59,7 +59,7 @@ class Program
             if (elapsed > 300)
             {
                 totalSlowDeserialization++;
-                Console.WriteLine($"🔥 Slow Deserialization detected: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed} ms");
+                Console.WriteLine($"🔥 Slow Deserialization detected: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed:F2} ms");
             }
 
             _ = StressTest.RunMemoryPressureTestAsync(32);
