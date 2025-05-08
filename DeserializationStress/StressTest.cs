@@ -12,10 +12,9 @@ public class StressTest
 
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    int size = rng.Next(250 * 1024, 2 * 1024 * 1024);
-                    size = 0;
-                    var arr = new byte[size];
-                    arr = null;
+                    int size = rng.Next(65 * 1024, 500 * 1024 * 1024);
+                    var str = new string('a', size);
+                    str = null;
 
                     if (rng.NextDouble() < 0.05)
                     {
@@ -24,25 +23,6 @@ public class StressTest
                 }
             }, cts.Token));
         }
-
-        var bigStringsTask = Task.Run(async () =>
-        {
-            var rng = new Random();
-
-            while (!cts.Token.IsCancellationRequested)
-            {
-                int size = rng.Next(65 * 1024, 500 * 1024 * 1024);
-                var str = new string('a', size);
-                str = null;
-
-                if (rng.NextDouble() < 0.05)
-                {
-                    await Task.Delay(50, cts.Token);
-                }
-            }
-        }, cts.Token);
-
-        tasks.Add(bigStringsTask);
 
         await Task.Delay(TimeSpan.FromSeconds(1), cts.Token);
         cts.Cancel();
@@ -53,7 +33,6 @@ public class StressTest
         }
         catch (OperationCanceledException)
         {
-            // Expected on cancellation
         }
     }
 }

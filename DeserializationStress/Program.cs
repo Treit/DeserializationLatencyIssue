@@ -16,7 +16,9 @@ class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        var totalRunTime = args.Length == 0 ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(int.Parse(args[0]));
+        var totalRunTime = args.Length == 0
+         ? TimeSpan.FromSeconds(60)
+         : TimeSpan.FromSeconds(int.Parse(args[0]));
 
         await Task.Yield();
 
@@ -29,17 +31,16 @@ class Program
 
         var swTotal = Stopwatch.StartNew();
         var totalSlowDeserialization = 0;
-        var maxDeserializationTime = 0;
+        var totalDeserializations = 0;
+        var minDeserializationTime = double.MaxValue;
+        var maxDeserializationTime = 0D;
 
-        // Memory usage tracking
-        var currentProcess = Process.GetCurrentProcess();
         var memoryReadings = new List<long>();
         var peakMemoryUsed = 0L;
 
         var memoryCheckTimer = new Timer(_ =>
         {
-            currentProcess.Refresh();
-            var memoryUsed = currentProcess.WorkingSet64;
+            var memoryUsed = GetCurrentlyUsedSystemMemory();
             memoryReadings.Add(memoryUsed);
             peakMemoryUsed = Math.Max(peakMemoryUsed, memoryUsed);
         }, null, 0, 1000);
@@ -49,12 +50,15 @@ class Program
             var start = DateTimeOffset.UtcNow;
             var sw = Stopwatch.StartNew();
             _ = JsonSerializer.Deserialize<StressTestDocument>(json);
-            var elapsed = sw.ElapsedMilliseconds;
+            var elapsed = sw.Elapsed.TotalMilliseconds;
             var end = DateTimeOffset.UtcNow;
+            totalDeserializations++;
+            minDeserializationTime = Math.Min(minDeserializationTime, elapsed);
+            maxDeserializationTime = Math.Max(maxDeserializationTime, elapsed);
+
             if (elapsed > 300)
             {
                 totalSlowDeserialization++;
-                maxDeserializationTime = Math.Max(maxDeserializationTime, (int)elapsed);
                 Console.WriteLine($"🔥 Slow Deserialization detected: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed} ms");
             }
 
@@ -75,8 +79,10 @@ class Program
 
         Console.WriteLine($"🏁 Finished after {swTotal.Elapsed}.");
         Console.WriteLine("--------------------------------------------------");
+        Console.WriteLine($"Total deserializations: {totalDeserializations}.");
         Console.WriteLine($"Total slow deserialization: {totalSlowDeserialization}.");
-        Console.WriteLine($"Max deserialization time: {maxDeserializationTime} ms.");
+        Console.WriteLine($"Min deserialization time: {minDeserializationTime:F2} ms.");
+        Console.WriteLine($"Max deserialization time: {maxDeserializationTime:F2} ms.");
         Console.WriteLine($"Total system memory: {FormatByteSize(systemMemory)}");
         Console.WriteLine($"Average memory usage: {FormatByteSize(avgMemoryUsed)} ({avgMemoryPercent:F2}%)");
         Console.WriteLine($"Peak memory usage: {FormatByteSize(peakMemoryUsed)} ({peakMemoryPercent:F2}%)");
@@ -94,6 +100,21 @@ class Program
         }
 
         return $"{bytes:0.##} {sizes[order]}";
+    }
+
+    private static long GetCurrentlyUsedSystemMemory()
+    {
+        var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
+        foreach (var os in searcher.Get())
+        {
+            if (os["TotalVisibleMemorySize"] is ulong totalMemory &&
+                os["FreePhysicalMemory"] is ulong freeMemory)
+            {
+                return (long)((totalMemory - freeMemory) * 1024);
+            }
+        }
+
+        return 0;
     }
 
     private static ulong GetSystemMemory()
