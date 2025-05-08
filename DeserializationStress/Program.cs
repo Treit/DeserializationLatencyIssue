@@ -78,10 +78,12 @@ class Program
         var avgMemoryPercent = avgMemoryUsed / systemMemory * 100;
         var peakMemoryPercent = peakMemoryUsed / (double)systemMemory * 100;
         var avgDeserializationTime = totalDeserializations > 0 ? totalDeserializationTime / totalDeserializations : 0;
+        var deserializationsPerSecond = totalDeserializations / swTotal.Elapsed.TotalSeconds;
 
         Console.WriteLine($"🏁 Finished after {swTotal.Elapsed}.");
         Console.WriteLine("--------------------------------------------------");
         Console.WriteLine($"Total deserializations: {totalDeserializations}.");
+        Console.WriteLine($"Deserializations per second: {deserializationsPerSecond:F2}/s");
         Console.WriteLine($"Total slow deserialization: {totalSlowDeserialization}.");
         Console.WriteLine($"Min deserialization time: {minDeserializationTime:F2} ms.");
         Console.WriteLine($"Avg deserialization time: {avgDeserializationTime:F2} ms.");
