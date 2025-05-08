@@ -7,7 +7,7 @@ The scenario in question is based on a real-world large-scale web service.
 The web service requests result in a lot of Large Object Heap (LOH) allocations. About 50% of all allocations are strings, as the service does a lot of heavy JSON processing and produces large JSON responses to send back to the caller.
 
 ## Issue after moving from .NET 6 to .NET 9.
-The service showed decreate in availability (measured by number of failed requests) due to requests timing out, shortly after moving to .NET 9. Requests are required to complete in a few seconds, so any introduced latency can cause timeouts to become more frequent, which was the case here.
+The service showed a decrease in availability (measured by number of failed requests) due to requests timing out, shortly after moving to .NET 9. Requests are required to complete in a few seconds, so any introduced latency can cause timeouts to become more frequent, which was the case here.
 
 In particular, it was observed that JSON serialization and deserialization operations that should normaly complete in tens of milliseconds at most were increasingly taking multiple seconds, failing the call.
 
