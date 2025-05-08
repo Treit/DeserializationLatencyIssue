@@ -12,7 +12,7 @@ public class StressTest
 
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    int size = rng.Next(65 * 1024, 500 * 1024 * 1024);
+                    int size = rng.Next(1024 * 1024, 250 * 1024 * 1024);
                     var str = new string('a', size);
                     str = null;
 

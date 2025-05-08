@@ -16,9 +16,7 @@ class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        var totalRunTime = args.Length == 0
-         ? TimeSpan.FromSeconds(60)
-         : TimeSpan.FromSeconds(int.Parse(args[0]));
+        var totalRunTime = args.Length == 0 ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(int.Parse(args[0]));
 
         await Task.Yield();
 
@@ -34,7 +32,9 @@ class Program
         var totalDeserializations = 0;
         var minDeserializationTime = double.MaxValue;
         var maxDeserializationTime = 0D;
+        var totalDeserializationTime = 0D;
 
+        var currentProcess = Process.GetCurrentProcess();
         var memoryReadings = new List<long>();
         var peakMemoryUsed = 0L;
 
@@ -53,6 +53,7 @@ class Program
             var elapsed = sw.Elapsed.TotalMilliseconds;
             var end = DateTimeOffset.UtcNow;
             totalDeserializations++;
+            totalDeserializationTime += elapsed;
             minDeserializationTime = Math.Min(minDeserializationTime, elapsed);
             maxDeserializationTime = Math.Max(maxDeserializationTime, elapsed);
 
@@ -62,7 +63,7 @@ class Program
                 Console.WriteLine($"🔥 Slow Deserialization detected: start={start:yyyy-MM-dd HH:mm:ss.fff}, end={end:yyyy-MM-dd HH:mm:ss.fff}, duration={elapsed:F2} ms");
             }
 
-            _ = StressTest.RunMemoryPressureTestAsync(32);
+            _ = StressTest.RunMemoryPressureTestAsync(16);
 
             if (swTotal.Elapsed > totalRunTime)
             {
@@ -76,13 +77,18 @@ class Program
         var systemMemory = GetSystemMemory();
         var avgMemoryPercent = avgMemoryUsed / systemMemory * 100;
         var peakMemoryPercent = peakMemoryUsed / (double)systemMemory * 100;
+        var avgDeserializationTime = totalDeserializations > 0 ? totalDeserializationTime / totalDeserializations : 0;
 
         Console.WriteLine($"🏁 Finished after {swTotal.Elapsed}.");
         Console.WriteLine("--------------------------------------------------");
         Console.WriteLine($"Total deserializations: {totalDeserializations}.");
         Console.WriteLine($"Total slow deserialization: {totalSlowDeserialization}.");
         Console.WriteLine($"Min deserialization time: {minDeserializationTime:F2} ms.");
+        Console.WriteLine($"Avg deserialization time: {avgDeserializationTime:F2} ms.");
         Console.WriteLine($"Max deserialization time: {maxDeserializationTime:F2} ms.");
+        Console.WriteLine($"Total GC events: {gcListener.TotalGcEvents}");
+        Console.WriteLine($"GC Start events: {gcListener.GcStartEvents}");
+        Console.WriteLine($"GC End events: {gcListener.GcEndEvents}");
         Console.WriteLine($"Total system memory: {FormatByteSize(systemMemory)}");
         Console.WriteLine($"Average memory usage: {FormatByteSize(avgMemoryUsed)} ({avgMemoryPercent:F2}%)");
         Console.WriteLine($"Peak memory usage: {FormatByteSize(peakMemoryUsed)} ({peakMemoryPercent:F2}%)");

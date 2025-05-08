@@ -14,6 +14,10 @@ public class GcEventListener : EventListener
     private StreamWriter? _writer;
     private readonly string _logFilePath;
 
+    public int TotalGcEvents { get; private set; }
+    public int GcStartEvents { get; private set; }
+    public int GcEndEvents { get; private set; }
+
     public GcEventListener(string logFilePath = "gc_log.txt")
     {
         _logFilePath = logFilePath;
@@ -55,6 +59,17 @@ public class GcEventListener : EventListener
         if (!eventData.EventName!.StartsWith("GCStart") && !eventData.EventName.StartsWith("GCEnd"))
         {
             return;
+        }
+
+        TotalGcEvents++;
+
+        if (eventData.EventName.StartsWith("GCStart"))
+        {
+            GcStartEvents++;
+        }
+        else if (eventData.EventName.StartsWith("GCEnd"))
+        {
+            GcEndEvents++;
         }
 
         if (eventData.EventName != null && eventData.Payload != null)
