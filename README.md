@@ -9,7 +9,7 @@ The web service requests result in a lot of Large Object Heap (LOH) allocations.
 ## Issue after moving from .NET 6 to .NET 9.
 The service showed a decrease in availability (measured by number of failed requests) due to requests timing out, shortly after moving to .NET 9. Requests are required to complete in a few seconds, so any introduced latency can cause timeouts to become more frequent, which was the case here.
 
-In particular, it was observed that JSON serialization and deserialization operations that should normaly complete in tens of milliseconds at most were increasingly taking multiple seconds, failing the call.
+In particular, it was observed that JSON serialization and deserialization operations that should normally complete in tens of milliseconds at most were increasingly taking multiple seconds, failing the call.
 
 ## Simulating the serialization issue
 The stress test program in this repo attempts to simulate similar conditions to what the web service is experiencing, by attempting as many deserializations of a large payload as possible, while other threads are concurrently doing a lot of LOH allocations.

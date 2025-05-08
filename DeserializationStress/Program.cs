@@ -33,8 +33,6 @@ class Program
         var minDeserializationTime = double.MaxValue;
         var maxDeserializationTime = 0D;
         var totalDeserializationTime = 0D;
-
-        var currentProcess = Process.GetCurrentProcess();
         var memoryReadings = new List<long>();
         var peakMemoryUsed = 0L;
 
